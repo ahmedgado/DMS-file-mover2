@@ -1,6 +1,10 @@
 package com.example.filemover;
 
-import entities.Folder;
+import com.example.filemover.repositories.DocumentRepository;
+import com.example.filemover.repositories.FolderRepository;
+import com.example.filemover.entities.Document;
+import com.example.filemover.entities.Folder;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -33,6 +37,11 @@ public class FileMoverEngine {
     private final int cores = Runtime.getRuntime().availableProcessors();
     private volatile int filesEnqueued = 0;
     private volatile int filesMoved = 0;
+    @Autowired
+    private DocumentRepository repository;
+
+    @Autowired
+    private FolderRepository folderRepo;
 
     public FileMoverEngine(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
@@ -41,6 +50,7 @@ public class FileMoverEngine {
     @PostConstruct
     public void start() {
         System.out.println("Starting FileMoverEngine with " + cores + " cores");
+        createBaseFolderAtFirstToPreventThreads();
         Executors.newSingleThreadExecutor().submit(this::walkFiles);
         ExecutorService lookupPool = Executors.newFixedThreadPool(cores * 2);
         for (int i = 0; i < cores * 2; i++) {
@@ -94,7 +104,10 @@ public class FileMoverEngine {
                 if(inClause.isEmpty())
                     return;
                 // Query using ucm_docid
-                String sql = "SELECT d.ucm_docid AS did , dt.name AS doc_type, ms.name AS main_subject, ss.name AS sub_subject, COALESCE(YEAR(d.doc_date), YEAR(d.reg_date)) AS doc_year  FROM dmsapp.document d  LEFT JOIN dmsapp.document_type dt ON d.document_type_id = dt.id  LEFT JOIN dmsapp.document_main_subject ms ON d.document_main_subject_id = ms.id  LEFT JOIN dmsapp.document_sub_subject ss ON d.document_sub_subject_id = ss.id  WHERE d.ucm_docid IN " +
+                String sql = "SELECT d.ucm_docid AS did , dt.name AS doc_type, ms.name AS main_subject, ss.name AS sub_subject, COALESCE(YEAR(d.doc_date), YEAR(d.reg_date)) AS doc_year " +
+                        ", d.document_type_id , document_main_subject_id, document_sub_subject_id " +
+                        " FROM dmsapp.document d  LEFT JOIN dmsapp.document_type dt ON d.document_type_id = dt.id  " +
+                        "LEFT JOIN dmsapp.document_main_subject ms ON d.document_main_subject_id = ms.id  LEFT JOIN dmsapp.document_sub_subject ss ON d.document_sub_subject_id = ss.id  WHERE d.ucm_docid IN " +
                         "(" + inClause.split("-")[0] + ")";
 
                 List<Map<String, Object>> rows = jdbc.queryForList(sql);
@@ -104,27 +117,42 @@ public class FileMoverEngine {
                     String docType = sanitize((String) row.get("doc_type"));
                     String mainSubj = sanitize((String) row.get("main_subject"));
                     String subSubj = sanitize((String) row.get("sub_subject"));
+                    Long docTypeId = (Long) row.get("document_type_id");
+                    Long mainSubjectId= (Long) row.get("document_main_subject_id");
+                    Long subSubId=(Long) row.get("document_sub_subject_id");
+
                     int year = row.get("doc_year") != null ? ((Number) row.get("doc_year")).intValue()
                             : Calendar.getInstance().get(Calendar.YEAR);
 
                     // Build destination path
-                    String destPath = fsBaseFolder + "/" + docType + "/" +
+                    String destPath = docType + "/" +
                             mainSubj + "/" + subSubj + "/" + year;
                     System.out.println("&&& "+destPath);
-                    List<Folder> folders = createFoldersStructure(destinationPath,document.getDocumentType().getId() , document.getDocumentMainSubject().getId()
-                            , document.getDocumentSubSubject().getId());
+                    List<Folder> folders = createFoldersStructure(destPath,docTypeId ,mainSubjectId
+                            , subSubId);
+                    Document document = repository.findByUcmDocID(did);
+                    Folder documentFolder = folders.get(folders.size() - 1);
+                    document.setFolder(documentFolder);
+                    document.setDocumentPathInStorage(destPath);
+
+
                     // Enqueue move tasks for matching files
                     batch.stream()
                             .filter(p -> com.google.common.io.Files.getNameWithoutExtension(
                                     p.getFileName().toString()).startsWith(String.valueOf(did)))
                             .forEach(p -> {
-                                Path target = Paths.get(destPath, p.getFileName().toString());
+                                Path target = Paths.get(fsBaseFolder + File.separator + destPath, p.getFileName().toString());
                                 try {
+                                    String fileOriginalName = p.getFileName().toString().split("-")[1];
+                                    document.setOriginalFileName(fileOriginalName);
+                                    document.setFileName(fileOriginalName);
                                     moveQueue.put(new MoveTask(p, target));
+                                    repository.save(document);
                                 } catch (InterruptedException e) {
                                     Thread.currentThread().interrupt();
                                 }
                             });
+
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -153,6 +181,18 @@ public class FileMoverEngine {
         return input == null ? "" : input.replaceAll("[^a-zA-Z0-9_-]", "_");
     }
 
+    public void createBaseFolderAtFirstToPreventThreads()
+    {
+        Folder parentFolder ;
+        parentFolder = new Folder();
+        parentFolder.setUcmFullUrl(fsBaseFolder);
+        String[] arrayOfParentPath =  PathSeperator.seperate(fsBaseFolder);
+        parentFolder.setFolderName(arrayOfParentPath[arrayOfParentPath.length - 1 ]);
+        parentFolder = folderRepo.save(parentFolder);
+        //parentFolder = folderRepo.save(parentFolder);
+        parentFolder.setUcmGUID("FLD_ROOT");
+        folderRepo.save(parentFolder);
+    }
     public List<Folder> createFoldersStructure(String path, Long documentTypeSubjectId, Long documentMainSubjectId, Long documentSubSubjectId) throws Exception  {
         String tempParentGUID = getFolderGUID(fsBaseFolder);
         Folder parentFolder ;

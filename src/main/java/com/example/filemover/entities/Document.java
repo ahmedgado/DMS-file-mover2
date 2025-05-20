@@ -1,14 +1,12 @@
-package entities;
+package com.example.filemover.entities;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.stereotype.Component;
 
 import javax.persistence.*;
 import java.io.Serializable;
 import java.util.Date;
 
-@Component
 @Entity
 @Getter @Setter
 public class Document implements Serializable , Comparable<Document> {

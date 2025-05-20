@@ -1,4 +1,4 @@
-package entities;
+package com.example.filemover.entities;
 import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
