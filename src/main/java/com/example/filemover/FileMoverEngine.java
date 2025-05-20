@@ -6,8 +6,11 @@ import com.example.filemover.entities.Document;
 import com.example.filemover.entities.Folder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.PostConstruct;
 import java.io.File;
@@ -193,6 +196,7 @@ public class FileMoverEngine {
         parentFolder.setUcmGUID("FLD_ROOT");
         folderRepo.save(parentFolder);
     }
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public List<Folder> createFoldersStructure(String path, Long documentTypeSubjectId, Long documentMainSubjectId, Long documentSubSubjectId) throws Exception  {
         String tempParentGUID = getFolderGUID(fsBaseFolder);
         Folder parentFolder ;
@@ -273,18 +277,18 @@ public class FileMoverEngine {
                         folder.setFolderSubjectType("DOCUMENT_SUB_SUBJECT");
                         folder.setSubjectTypeId(documentSubSubjectId);
                     }
-                    folders.add(folder);
                     folder = folderRepo.save(folder);
                     ////System.out.println.println("Folder " + arrayOfPath[i] + "Created" + "under" + "GUID ::" + tempParentGUID);
                     // tempParentGUID = getFolderGUID(tempPath);
                     folder.setUcmGUID(folder.getId().toString());
                     folderRepo.save(folder);
+                    folders.add(folder);
 
-
-
-
-                } catch (Exception ex) {
+                } catch (DataIntegrityViolationException ex) {
+                    System.out.println("Skipping duplicate document id={} :" + ex.getMostSpecificCause().getMessage());
+                }catch (Exception ex) {
                     ex.printStackTrace();
+
                 }
                 ////System.out.println.println("New Folder " + arrayOfPath[i] + "GUID is " + tempParentGUID);
 
