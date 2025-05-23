@@ -147,8 +147,8 @@ public class FileMoverEngine {
                                 Path target = Paths.get(fsBaseFolder + File.separator + destPath, p.getFileName().toString());
                                 try {
                                     String fileOriginalName = p.getFileName().toString().split("-")[1];
+                                    document.setFileName(document.getId()+"-"+fileOriginalName);
                                     document.setOriginalFileName(fileOriginalName);
-                                    document.setFileName(fileOriginalName);
                                     moveQueue.put(new MoveTask(p, target));
                                     repository.save(document);
                                 } catch (InterruptedException e) {
