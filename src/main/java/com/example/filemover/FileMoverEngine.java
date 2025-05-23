@@ -148,6 +148,7 @@ public class FileMoverEngine {
                     Document document = repository.findByUcmDocID(did);
                     Folder documentFolder = folders.get(folders.size() - 1);
                     document.setFolder(documentFolder);
+                    document.setUcmFLD(documentFolder.getId()+"");
                     document.setDocumentPathInStorage(destPath);
 
 

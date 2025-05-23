@@ -45,6 +45,9 @@ public class Document implements Serializable , Comparable<Document> {
     @Column
     private String documentPathInStorage;
 
+    @Column
+    private String ucmFLD;
+
     public Document(Long id)
     {
         this.id = id;
