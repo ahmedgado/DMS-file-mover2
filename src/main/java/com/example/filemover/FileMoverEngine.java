@@ -4,6 +4,7 @@ import com.example.filemover.repositories.DocumentRepository;
 import com.example.filemover.repositories.FolderRepository;
 import com.example.filemover.entities.Document;
 import com.example.filemover.entities.Folder;
+import org.hibernate.annotations.Synchronize;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -129,7 +130,7 @@ public class FileMoverEngine {
                             : Calendar.getInstance().get(Calendar.YEAR);
 
                     // Build destination path
-                    String destPath = fsBaseFolder + "/" + docType + "/" +
+                    String destPath = "/" + docType + "/" +
                             mainSubj + "/" + subSubj + "/" + year;
                     System.out.println("&&& "+destPath);
                     List<Folder> folders = createFoldersStructure(destPath,docTypeId ,mainSubjectId
@@ -173,7 +174,7 @@ public class FileMoverEngine {
                 Files.createDirectories(task.dest.getParent());
                 Files.copy(task.src, task.dest, StandardCopyOption.REPLACE_EXISTING);
                 filesMoved++;
-                if (filesMoved % 1000 == 0) {
+                if (filesMoved % batchSize == 0) {
                     System.out.println(filesMoved + " files moved so far");
                 }
             } catch (Exception e) {
@@ -200,7 +201,7 @@ public class FileMoverEngine {
         folderRepo.save(parentFolder);
     }
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public List<Folder> createFoldersStructure(String path, Long documentTypeSubjectId, Long documentMainSubjectId, Long documentSubSubjectId) throws Exception  {
+    public synchronized List<Folder> createFoldersStructure(String path, Long documentTypeSubjectId, Long documentMainSubjectId, Long documentSubSubjectId) throws Exception  {
         String tempParentGUID = getFolderGUID(fsBaseFolder);
         Folder parentFolder ;
         if(tempParentGUID == null)
@@ -287,9 +288,7 @@ public class FileMoverEngine {
                     folderRepo.save(folder);
                     folders.add(folder);
 
-                } catch (DataIntegrityViolationException ex) {
-                    System.out.println("Skipping duplicate document id={} :" + ex.getMostSpecificCause().getMessage());
-                }catch (Exception ex) {
+                } catch (Exception ex) {
                     ex.printStackTrace();
 
                 }
