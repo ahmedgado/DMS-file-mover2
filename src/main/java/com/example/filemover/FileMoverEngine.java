@@ -101,10 +101,21 @@ public class FileMoverEngine {
 
                 // Extract ucm_docId values from filenames
                 List<String> ids = batch.stream()
-                        .map(p -> com.google.common.io.Files.getNameWithoutExtension(
-                                p.getFileName().toString()))
+                        .map(p -> {
+                            // getNameWithoutExtension => "12345-someFileName"
+                            String base = com.google.common.io.Files.getNameWithoutExtension(
+                                    p.getFileName().toString());
+                            // split and take the part before "-"
+                            String idOnly = base.contains("-")
+                                    ? base.split("-", 2)[0]
+                                    : base;
+                            return idOnly;
+                        })
                         .collect(Collectors.toList());
-                String inClause = String.join(",", ids);
+
+                String inClause = ids.stream()
+                        .map(id -> "'" + id + "'")
+                        .collect(Collectors.joining(","));
                 System.out.println("IN clause (ucm_docid IDs): " + inClause);
                 if(inClause.isEmpty())
                     return;
@@ -113,7 +124,7 @@ public class FileMoverEngine {
                         ", d.document_type_id , document_main_subject_id, document_sub_subject_id " +
                         " FROM dmsapp.document d  LEFT JOIN dmsapp.document_type dt ON d.document_type_id = dt.id  " +
                         "LEFT JOIN dmsapp.document_main_subject ms ON d.document_main_subject_id = ms.id  LEFT JOIN dmsapp.document_sub_subject ss ON d.document_sub_subject_id = ss.id  WHERE d.ucm_docid IN " +
-                        "(" + inClause.split("-")[0] + ")";
+                        "(" + inClause + ")";
 
                 List<Map<String, Object>> rows = jdbc.queryForList(sql);
 
@@ -132,7 +143,6 @@ public class FileMoverEngine {
                     // Build destination path
                     String destPath = "/" + docType + "/" +
                             mainSubj + "/" + subSubj + "/" + year;
-                    System.out.println("&&& "+destPath);
                     List<Folder> folders = createFoldersStructure(destPath,docTypeId ,mainSubjectId
                             , subSubId);
                     Document document = repository.findByUcmDocID(did);
@@ -155,7 +165,9 @@ public class FileMoverEngine {
                                     document.setOriginalFileName(fileOriginalName);
                                     moveQueue.put(new MoveTask(p, target));
                                     repository.save(document);
+                                    System.out.println("Updated Document UCM ID " + document.getUcmDocID() + " with file " + p.getFileName());
                                 } catch (InterruptedException e) {
+                                    e.printStackTrace();
                                     Thread.currentThread().interrupt();
                                 }
                             });
