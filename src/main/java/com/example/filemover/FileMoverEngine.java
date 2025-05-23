@@ -171,7 +171,7 @@ public class FileMoverEngine {
             try {
                 MoveTask task = moveQueue.take();
                 Files.createDirectories(task.dest.getParent());
-                Files.move(task.src, task.dest, StandardCopyOption.REPLACE_EXISTING);
+                Files.copy(task.src, task.dest, StandardCopyOption.REPLACE_EXISTING);
                 filesMoved++;
                 if (filesMoved % 1000 == 0) {
                     System.out.println(filesMoved + " files moved so far");
