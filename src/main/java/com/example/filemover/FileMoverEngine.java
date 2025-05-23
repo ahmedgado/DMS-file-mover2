@@ -54,7 +54,7 @@ public class FileMoverEngine {
     @PostConstruct
     public void start() {
         System.out.println("Starting FileMoverEngine with " + cores + " cores");
-        createBaseFolderAtFirstToPreventThreads();
+        //createBaseFolderAtFirstToPreventThreads();
         Executors.newSingleThreadExecutor().submit(this::walkFiles);
         ExecutorService lookupPool = Executors.newFixedThreadPool(cores * 2);
         for (int i = 0; i < cores * 2; i++) {
@@ -129,7 +129,7 @@ public class FileMoverEngine {
                             : Calendar.getInstance().get(Calendar.YEAR);
 
                     // Build destination path
-                    String destPath = docType + "/" +
+                    String destPath = fsBaseFolder + "/" + docType + "/" +
                             mainSubj + "/" + subSubj + "/" + year;
                     System.out.println("&&& "+destPath);
                     List<Folder> folders = createFoldersStructure(destPath,docTypeId ,mainSubjectId
