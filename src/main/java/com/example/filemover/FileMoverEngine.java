@@ -16,6 +16,7 @@ import javax.annotation.PostConstruct;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
@@ -147,7 +148,9 @@ public class FileMoverEngine {
                                 Path target = Paths.get(fsBaseFolder + File.separator + destPath, p.getFileName().toString());
                                 try {
                                     String fileOriginalName = p.getFileName().toString().split("-")[1];
-                                    document.setFileName(document.getId()+"-"+fileOriginalName);
+                                    DateTimeFormatter timeStampPattern = DateTimeFormatter.ofPattern("ddMMyyyyHHmmss");
+                                    String fileNameDB =  timeStampPattern.format(java.time.LocalDateTime.now()) + "-" + fileOriginalName;
+                                    document.setFileName(fileNameDB);
                                     document.setOriginalFileName(fileOriginalName);
                                     moveQueue.put(new MoveTask(p, target));
                                     repository.save(document);
