@@ -149,6 +149,7 @@ public class FileMoverEngine {
                     Folder documentFolder = folders.get(folders.size() - 1);
                     document.setFolder(documentFolder);
                     document.setUcmFLD(documentFolder.getId()+"");
+                    document.setUcmWebUrl(destPath);
                     document.setDocumentPathInStorage(destPath);
 
 

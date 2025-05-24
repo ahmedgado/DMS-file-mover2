@@ -48,6 +48,9 @@ public class Document implements Serializable , Comparable<Document> {
     @Column
     private String ucmFLD;
 
+    @Column
+    private String ucmWebUrl;
+
     public Document(Long id)
     {
         this.id = id;
