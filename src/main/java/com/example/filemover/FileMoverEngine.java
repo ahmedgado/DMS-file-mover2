@@ -141,7 +141,7 @@ public class FileMoverEngine {
                             : Calendar.getInstance().get(Calendar.YEAR);
 
                     // Build destination path
-                    String destPath = "/" + docType + "/" +
+                    String destPath =  docType + "/" +
                             mainSubj + "/" + subSubj + "/" + year;
                     List<Folder> folders = createFoldersStructure(destPath,docTypeId ,mainSubjectId
                             , subSubId);
@@ -213,7 +213,7 @@ public class FileMoverEngine {
         parentFolder.setUcmGUID("FLD_ROOT");
         folderRepo.save(parentFolder);
     }
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+
     public synchronized List<Folder> createFoldersStructure(String path, Long documentTypeSubjectId, Long documentMainSubjectId, Long documentSubSubjectId) throws Exception  {
         String tempParentGUID = getFolderGUID(fsBaseFolder);
         Folder parentFolder ;
