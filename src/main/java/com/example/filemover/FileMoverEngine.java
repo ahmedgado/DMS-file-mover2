@@ -121,7 +121,7 @@ public class FileMoverEngine {
                     return;
                 // Query using ucm_docid
                 String sql = "SELECT d.ucm_docid AS did , dt.name AS doc_type, ms.name AS main_subject, ss.name AS sub_subject, COALESCE(YEAR(d.doc_date), YEAR(d.reg_date)) AS doc_year " +
-                        ", d.document_type_id , document_main_subject_id, document_sub_subject_id , de.name AS encryotion_name" +
+                        ", d.document_type_id , document_main_subject_id, document_sub_subject_id , de.encryption_name AS encryption_name" +
                         " FROM dmsapp.document d  LEFT JOIN dmsapp.document_type dt ON d.document_type_id = dt.id  " +
                         "LEFT JOIN dmsapp.document_main_subject ms ON d.document_main_subject_id = ms.id  LEFT JOIN dmsapp.document_sub_subject ss" +
                         " ON d.document_sub_subject_id = ss.id LEFT JOIN dmsapp.encryption_data de ON d.encryption_data_id = de.id  WHERE d.ucm_docid IN " +
@@ -137,7 +137,7 @@ public class FileMoverEngine {
                     Long docTypeId = (Long) row.get("document_type_id");
                     Long mainSubjectId= (Long) row.get("document_main_subject_id");
                     Long subSubId=(Long) row.get("document_sub_subject_id");
-                    String encryption_level = sanitize((String) row.get("encryotion_name"));
+                    String encryption_level = sanitize((String) row.get("encryption_name"));
 
                     int year = row.get("doc_year") != null ? ((Number) row.get("doc_year")).intValue()
                             : Calendar.getInstance().get(Calendar.YEAR);
@@ -201,7 +201,7 @@ public class FileMoverEngine {
 
     /** Sanitize for filesystem */
     private String sanitize(String input) {
-        return input == null ? "" : input.replaceAll("[^a-zA-Z0-9_-]", "_");
+        return input == null ? "" : input;
     }
 
     public void createBaseFolderAtFirstToPreventThreads()
